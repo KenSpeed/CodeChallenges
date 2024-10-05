@@ -198,7 +198,7 @@ class VWAPCalculatorApplicationTest {
         };
 
         Map<String, Double> expectedResults = new HashMap<>();
-        expectedResults.put("EUR/USD 9:00 AM", 1.1001);
+        expectedResults.put("EUR/USD 9:00 AM", 1.1000);
         expectedResults.put("EUR/USD 10:00 AM", 1.1001);
         expectedResults.put("EUR/USD 11:00 AM", 1.1002);
 
@@ -210,7 +210,30 @@ class VWAPCalculatorApplicationTest {
     }
 
     /**
-     * Test Case 12: multiple trades for two currency pairs at the same time
+     * Test Case 12: multiple trades for one currency pair with different times in continuous hours
+     */
+    @Test
+    public void test_multiple_trades_for_one_currency_pair_with_continuous_hours() {
+        String[][] trades = {
+                {"9:31 AM", "EUR/USD", "1.1000", "100"},
+                {"9:31 AM", "EUR/USD", "1.1001", "200"},
+                {"10:31 AM", "EUR/USD", "1.1005", "300"},
+                {"10:31 AM", "EUR/USD", "1.1006", "400"}
+        };
+
+        Map<String, Double> expectedResults = new HashMap<>();
+        expectedResults.put("EUR/USD 9:00 AM", 1.1001);
+        expectedResults.put("EUR/USD 10:00 AM", 1.10055);
+
+        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        assertEquals(expectedResults.size(), actualResults.size());
+        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
+            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
+        }
+    }
+
+    /**
+     * Test Case 13: multiple trades for two currency pairs at the same time
      */
     @Test
     public void test_multiple_trades_for_two_currency_pairs_at_the_same_time() {
@@ -234,7 +257,7 @@ class VWAPCalculatorApplicationTest {
     }
 
     /**
-     * Test Case 13: multiple trades for two currency pairs within an hour
+     * Test Case 14: multiple trades for two currency pairs within an hour
      */
     @Test
     public void test_multiple_trades_for_two_currency_pairs_within_an_hour() {
@@ -257,29 +280,6 @@ class VWAPCalculatorApplicationTest {
         }
     }
 
-
-    /**
-     * Test Case 14: multiple trades for one currency pair with continuous hours
-     */
-    @Test
-    public void test_multiple_trades_for_one_currency_pair_with_continuous_hours() {
-        String[][] trades = {
-                {"9:31 AM", "EUR/USD", "1.1000", "100"},
-                {"9:31 AM", "EUR/USD", "1.1001", "200"},
-                {"10:31 AM", "EUR/USD", "1.1005", "300"},
-                {"10:31 AM", "EUR/USD", "1.1006", "400"}
-        };
-
-        Map<String, Double> expectedResults = new HashMap<>();
-        expectedResults.put("EUR/USD 9:00 AM", 1.1001);
-        expectedResults.put("EUR/USD 10:00 AM", 1.10055);
-
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
-        assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
-    }
 
     /**
      * Test Case 15: multiple trades for one currency pair with broken hours
