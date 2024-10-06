@@ -1,15 +1,25 @@
 package com.ken;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class VWAPCalculatorApplicationTest {
 
-    private final VWAPCalculatorApplication vwapCalculatorApplication = new VWAPCalculatorApplication();
+    private VWAPCalculatorApplication vwapCalculatorApplication;
+
+    @BeforeEach
+    public void setUp() {
+        vwapCalculatorApplication = new VWAPCalculatorApplication();
+    }
 
     /**
      * Test Case 1: edge case - empty trade
@@ -19,8 +29,9 @@ class VWAPCalculatorApplicationTest {
         String[][] trades = {};
 
         Map<String, Double> expectedResults = new HashMap<>();
-
-        assertEquals(expectedResults, vwapCalculatorApplication.processTrades(trades));
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
+        assertEquals(expectedResults, actualResults);
     }
 
     /**
@@ -161,7 +172,8 @@ class VWAPCalculatorApplicationTest {
         };
         Map<String, Double> expectedResults = new HashMap<>();
         expectedResults.put("EUR/USD 9:00 AM", 1.1000);
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults, actualResults);
     }
 
@@ -179,7 +191,8 @@ class VWAPCalculatorApplicationTest {
         Map<String, Double> expectedResults = new HashMap<>();
         expectedResults.put("EUR/USD 9:00 AM", 1.1001);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
@@ -202,7 +215,8 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 10:00 AM", 1.1001);
         expectedResults.put("EUR/USD 11:00 AM", 1.1002);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
@@ -225,7 +239,8 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 1.1001);
         expectedResults.put("EUR/USD 10:00 AM", 1.10055);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
@@ -249,7 +264,8 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 1.1001);
         expectedResults.put("USD/JPY 9:00 AM", 110.0054);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
@@ -273,7 +289,8 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 1.1001);
         expectedResults.put("USD/JPY 9:00 AM", 110.0054);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
@@ -296,12 +313,122 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 1.1001);
         expectedResults.put("EUR/USD 11:00 AM", 1.1005);
 
-        Map<String, Double> actualResults = vwapCalculatorApplication.processTrades(trades);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
         for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
             assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
         }
     }
 
+    /**
+     * Test Case 16: edge case - large trades
+     */
+    @Test
+    public void test_large_trade_stream() {
+        String[][] trades = new String[10000][4];
+        for (int i = 0; i < 10000; i++) {
+            trades[i][0] = "9:31 AM";
+            trades[i][1] = "EUR/USD";
+            trades[i][2] = "1.1000";
+            trades[i][3] = "100";
+        }
+        Map<String, Double> expectedResults = new HashMap<>();
+        expectedResults.put("EUR/USD 9:00 AM", 1.1000);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
+        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
+            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
+        }
+    }
+
+    /**
+     * Test Case 17: edge case - boundary trade price
+     */
+    @Test
+    public void test_boundary_values() {
+        String[][] trades = {
+                {"9:31 AM", "EUR/USD", "0.0001", "100"},
+                {"9:31 AM", "EUR/USD", "999999.9999", "100"}
+        };
+        Map<String, Double> expectedResults = new HashMap<>();
+        expectedResults.put("EUR/USD 9:00 AM", 500000.00005);
+        vwapCalculatorApplication.processTrades(trades);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
+        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
+            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
+        }
+    }
+
+    /**
+     * Test Case 18: edge case - concurrent thread for multiple trades
+     */
+    @Test
+    @Timeout(10)
+    public void test_concurrent_thread_for_multiple_trades() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+
+        String[][] trades1 = {
+                {"9:31 AM", "EUR/USD", "1.1000", "100"},
+                {"9:32 AM", "EUR/USD", "1.1001", "200"}
+        };
+
+        String[][] trades2 = {
+                {"9:31 AM", "GBP/USD", "1.3000", "100"},
+                {"9:32 AM", "GBP/USD", "1.3001", "200"}
+        };
+
+        String[][] trades3 = {
+                {"9:31 AM", "EUR/USD", "1.1002", "100"},
+                {"9:32 AM", "EUR/USD", "1.1003", "200"}
+        };
+
+        Runnable task1 = () -> vwapCalculatorApplication.processTrades(trades1);
+        Runnable task2 = () -> vwapCalculatorApplication.processTrades(trades2);
+        Runnable task3 = () -> vwapCalculatorApplication.processTrades(trades3);
+
+        executor.execute(task1);
+        executor.execute(task2);
+        executor.execute(task3);
+
+        executor.shutdown();
+        executor.awaitTermination(5, TimeUnit.SECONDS);
+
+        assertEquals(1.10016, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.00001);
+        assertEquals(1.30006, vwapCalculatorApplication.getVWAP("GBP/USD", "9:00 AM"), 0.00001);
+        assertEquals(1.10016, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.00001);
+    }
+
+    /**
+     *
+     * Test Case 19: edge case - concurrent thread trade for one trade
+     *
+     * @throws InterruptedException
+     */
+    @Test
+    @Timeout(10)
+    public void test_concurrent_thread_for_one_trade() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+
+        String[][] trades = {
+                {"9:31 AM", "EUR/USD", "1.1000", "100"},
+                {"9:32 AM", "EUR/USD", "1.1001", "200"},
+                {"9:33 AM", "EUR/USD", "1.1002", "300"},
+                {"9:34 AM", "EUR/USD", "1.1003", "400"},
+                {"9:35 AM", "EUR/USD", "1.1004", "500"}
+        };
+
+        Runnable task = () -> vwapCalculatorApplication.processTrades(trades);
+
+        for (int i = 0; i < 10; i++) {
+            executor.execute(task);
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        assertEquals(1, vwapCalculatorApplication.getAllVWAP().size());
+        assertEquals(1.1002, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.0001);
+    }
 
 }

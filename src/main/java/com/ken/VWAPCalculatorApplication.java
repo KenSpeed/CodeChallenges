@@ -9,27 +9,37 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAdder;
 
 class VWAPCalculator {
-    private double priceVolumeSum = 0.0;  // Sum of Price * Volume
-    private double volumeSum = 0.0;       // Sum of Volume
+    private final DoubleAdder priceVolumeSum = new DoubleAdder();  // Sum of Price * Volume
+    private final AtomicLong volumeSum = new AtomicLong();       // Sum of Volume
 
-    public void addTrade(double price, double volume) {
-        priceVolumeSum += price * volume;
-        volumeSum += volume;
+    public void addTrade(double price, long volume) {
+        priceVolumeSum.add(price * volume);
+        volumeSum.addAndGet(volume);
     }
 
     public double calculateVWAP() {
-        if (volumeSum == 0) {
+        long volume = volumeSum.get();
+        if (volume == 0) {
             return 0.0;
         }
-        return priceVolumeSum / volumeSum;
+        return priceVolumeSum.sum() / volume;
+    }
+
+    public void reset() {
+        priceVolumeSum.reset();
+        volumeSum.set(0);
     }
 }
 
 public class VWAPCalculatorApplication {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a", Locale.US);
+    private final ConcurrentHashMap<String, Map<LocalTime, VWAPCalculator>> vwapDataMap = new ConcurrentHashMap<>();
 
     /**
      * Obtains VWAP for each currency-pair in data stream
@@ -37,21 +47,23 @@ public class VWAPCalculatorApplication {
      * @param trades: data stream in this format: [Timestamp, Currency-pair, Price, Volume]
      * @return Map<currency-pair: minimum of trade time in hour, VWAP>
      */
-    public Map<String, Double> processTrades(String[][] trades) {
-        Map<String, Map<LocalTime, VWAPCalculator>> vwapDataMap = new HashMap<>();
+    public void processTrades(String[][] trades) {
 
         for (String[] trade : trades) {
             validateTradeParams(trade);
             LocalTime tradeTime = LocalTime.parse(trade[0], TIME_FORMATTER);
             String currencyPair = trade[1];
             double price = Double.parseDouble(trade[2]);
-            int volume = Integer.parseInt(trade[3]);
-            VWAPCalculator vwapCalculator = vwapDataMap.computeIfAbsent(currencyPair, k -> new HashMap<>())
-                                                       .computeIfAbsent(tradeTime.withMinute(0), k -> new VWAPCalculator());
-
-            vwapCalculator.addTrade(price, volume);
+            long volume = Long.parseLong(trade[3]);
+            // tradeTime.withMinute(0): set the output format, which can be decided by business owner to show
+            vwapDataMap.computeIfAbsent(currencyPair, k -> new ConcurrentHashMap<>())
+                       .computeIfAbsent(tradeTime.withMinute(0), k -> new VWAPCalculator())
+                       .addTrade(price, volume);
         }
 
+    }
+
+    public Map<String, Double> getAllVWAP() {
         Map<String, Double> vwapResults = new HashMap<>();
 
         for (Map.Entry<String, Map<LocalTime, VWAPCalculator>> entry : vwapDataMap.entrySet()) {
@@ -68,6 +80,20 @@ public class VWAPCalculatorApplication {
         }
 
         return vwapResults;
+    }
+
+    public double getVWAP(String currencyPair, String time) {
+        if (!isValidCurrency(currencyPair)) {
+            throw new IllegalArgumentException("Invalid currency pair");
+        }
+
+        if (!isValidTime(time)) {
+            throw new IllegalArgumentException("Invalid trade time format");
+        }
+
+        LocalTime tradeTime = LocalTime.parse(time, TIME_FORMATTER).withMinute(0);
+        VWAPCalculator data = vwapDataMap.getOrDefault(currencyPair, new ConcurrentHashMap<>()).get(tradeTime);
+        return data == null ? 0.0 : data.calculateVWAP();
     }
 
     private void validateTradeParams(String[] trade) {
@@ -137,8 +163,8 @@ public class VWAPCalculatorApplication {
 
     private boolean isValidVolume(String volume) {
         try {
-            Integer volumeValue = Integer.parseInt(volume);
-            return volumeValue.compareTo(0) > 0;
+            Long volumeValue = Long.parseLong(volume);
+            return volumeValue.compareTo(0L) > 0;
         } catch (NumberFormatException e) {
             return false;
         }
