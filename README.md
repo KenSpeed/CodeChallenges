@@ -25,7 +25,8 @@ String[][] trades = {
 };
 
 VWAPCalculatorApplication calculator = new VWAPCalculatorApplication();
-Map<String, Double> vwapResults = calculator.calculateVwap(trades);
+calculator.processTrades(trades);
+Map<String, Double> vwapResults = calculator.getAllVWAP();
 
 ```
 
@@ -35,11 +36,6 @@ Map<String, Double> vwapResults = calculator.calculateVwap(trades);
 EUR/USD 9:00 AM, 1.1001
 EUR/USD 10:00 AM, 1.1001
 ```
-
-10 格 10 个 strike，两个额外机会都是 strike。
-* 每格的分数 = 10 + 接下来两球的分数 = 10 + 10 + 10 = 30
-* 总共的分数 = 10 格 X 30 = 300
-
 
 ## Testing Cases
 
