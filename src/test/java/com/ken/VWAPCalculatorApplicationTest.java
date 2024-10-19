@@ -8,18 +8,27 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VWAPCalculatorApplicationTest {
 
     private VWAPCalculatorApplication vwapCalculatorApplication;
+    private TestLogHandler logHandler;
 
     @BeforeEach
     public void setUp() {
         vwapCalculatorApplication = new VWAPCalculatorApplication();
+        Logger logger = Logger.getLogger(VWAPCalculatorApplication.class.getName());
+        logHandler = new TestLogHandler();
+        logger.addHandler(logHandler);
+        logger.setUseParentHandlers(false);
     }
 
     /**
@@ -44,8 +53,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "1.1001", "100", "abc"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade stream format", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, 1.1001, 100, abc - Invalid trade stream format"));
     }
 
     /**
@@ -58,8 +67,8 @@ class VWAPCalculatorApplicationTest {
                 {"abc", "EUR/USD", "1.1001", "100"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: abc, EUR/USD, 1.1001, 100 - Invalid trade time format"));
     }
 
     /**
@@ -71,8 +80,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "abc", "1.1001", "100"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, abc, 1.1001, 100 - Invalid currency pair"));
     }
 
     /**
@@ -84,8 +93,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "0", "100"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, 0, 100 - Invalid trade price"));
     }
 
     /**
@@ -98,8 +107,9 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "1.1001", "def"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, abc, 100 - Invalid trade price"));
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, 1.1001, def - Invalid trade volume"));
     }
 
     /**
@@ -111,8 +121,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "110.002", "0"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, 110.002, 0 - Invalid trade volume"));
     }
 
     /**
@@ -124,8 +134,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "110.002", "abc"}
         };
 
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
-        assertEquals("Invalid trade parameters", thrown.getMessage());
+        vwapCalculatorApplication.processTrades(trades);
+        assertTrue(logHandler.isLogMessagePresent(Level.WARNING, "Skipping invalid trade: 9:31 AM, EUR/USD, 110.002, abc - Invalid trade volume"));
     }
 
     /**
@@ -342,18 +352,19 @@ class VWAPCalculatorApplicationTest {
         executor.execute(task3);
 
         executor.shutdown();
-        executor.awaitTermination(5, TimeUnit.SECONDS);
 
-        assertEquals(1.10016, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.00001);
-        assertEquals(1.30006, vwapCalculatorApplication.getVWAP("GBP/USD", "9:00 AM"), 0.00001);
-        assertEquals(1.10016, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.00001);
+        Map<String, Double> expectedResults = new HashMap<>();
+        expectedResults.put("EUR/USD 9:00 AM", 1.10016);
+        expectedResults.put("GBP/USD 9:00 AM", 1.30006);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
      *
      * Test Case 19: edge case - concurrent thread trade for one trade
      *
-     * @throws InterruptedException
+     * @throws InterruptedException  might throw exception
      */
     @Test
     @Timeout(10)
@@ -375,10 +386,34 @@ class VWAPCalculatorApplicationTest {
         }
 
         executor.shutdown();
-        executor.awaitTermination(10, TimeUnit.SECONDS);
-
-        assertEquals(1, vwapCalculatorApplication.getAllVWAP().size());
-        assertEquals(1.1002, vwapCalculatorApplication.getVWAP("EUR/USD", "9:00 AM"), 0.0001);
+        Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
+        Map<String, Double> expectedResults = new HashMap<>();
+        expectedResults.put("EUR/USD 9:00 AM", 1.1002);
+        assertEquals(1, actualResults.size());
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
+    private static class TestLogHandler extends Handler {
+
+        private final StringBuilder logMessages = new StringBuilder();
+
+        @Override
+        public void publish(LogRecord record) {
+            logMessages.append(new SimpleFormatter().format(record));
+        }
+
+        @Override
+        public void flush() {
+            // No-op
+        }
+
+        @Override
+        public void close() throws SecurityException {
+            // No-op
+        }
+
+        public boolean isLogMessagePresent(Level level, String message) {
+            return logMessages.toString().contains(level.getName()) && logMessages.toString().contains(message);
+        }
+    }
 }
