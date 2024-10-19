@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class VWAPCalculatorApplicationTest {
 
@@ -43,13 +44,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "1.1001", "100", "abc"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade stream format", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade stream format", thrown.getMessage());
     }
 
     /**
@@ -62,13 +58,8 @@ class VWAPCalculatorApplicationTest {
                 {"abc", "EUR/USD", "1.1001", "100"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade time format", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -80,13 +71,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "abc", "1.1001", "100"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid currency pair", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -98,13 +84,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "0", "100"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade price", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -117,13 +98,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "1.1001", "def"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade price", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -135,13 +111,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "110.002", "0"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade volume", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -153,13 +124,8 @@ class VWAPCalculatorApplicationTest {
                 {"9:31 AM", "EUR/USD", "110.002", "abc"}
         };
 
-        try {
-            vwapCalculatorApplication.processTrades(trades);
-            assert false;
-        } catch (IllegalArgumentException e) {
-            assert true;
-            assertEquals("Invalid trade volume", e.getMessage());
-        }
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> vwapCalculatorApplication.processTrades(trades));
+        assertEquals("Invalid trade parameters", thrown.getMessage());
     }
 
     /**
@@ -194,9 +160,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -218,9 +182,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -242,9 +204,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -267,9 +227,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -292,9 +250,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
 
@@ -316,9 +272,7 @@ class VWAPCalculatorApplicationTest {
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
         assertEquals(expectedResults.size(), actualResults.size());
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -337,9 +291,7 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 1.1000);
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
@@ -355,9 +307,7 @@ class VWAPCalculatorApplicationTest {
         expectedResults.put("EUR/USD 9:00 AM", 500000.00005);
         vwapCalculatorApplication.processTrades(trades);
         Map<String, Double> actualResults = vwapCalculatorApplication.getAllVWAP();
-        for (Map.Entry<String, Double> entry : expectedResults.entrySet()) {
-            assertEquals(entry.getValue(), actualResults.get(entry.getKey()), 0.0001);
-        }
+        expectedResults.forEach((key, value) -> assertEquals(value, actualResults.get(key), 0.0001));
     }
 
     /**
